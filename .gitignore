@@ -256,3 +256,6 @@ tfplan
 
 # Snyk Security Extension - AI Rules (auto-generated)
 .github/instructions/snyk_rules.instructions.md
+
+# Workshop sample data (large, provided separately; uploaded to the lake by infra/eks.tf)
+sampleData/

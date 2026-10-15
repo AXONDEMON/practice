@@ -68,14 +68,39 @@ locals {
     for file in fileset(format("%s/../data", path.module), "*/pom.xml") :
     dirname(file) if !startswith(dirname(file), "_") && !startswith(dirname(file), ".")
   ]
-  data_names_python = {
+  data_names_python = merge({
     for name in local.data_dirs_python : name => {
       name = name
       path = abspath(format("%s/../data/%s", path.module, name))
       file = "job.py"
       reqs = "requirements.txt"
+      args = ""
     }
+    }, {
+    # The talent ETL job lives in the example folder, so it is registered here.
+    # --seed-source loads the HR sample into Aurora on the first run.
+    "talent-etl" = {
+      name = "talent-etl"
+      path = abspath(format("%s/../data/_examples/python-job", path.module))
+      file = "job.py"
+      reqs = "requirements.txt"
+      args = "--seed-source"
+    }
+  })
+  sample_data_dir = abspath(format("%s/../sampleData/data-engineering-sample-performance-scenario/data-engineering-performance-talent-management", path.module))
+  # Environment for data jobs on EKS, passed to the pod through a Kubernetes Secret.
+  data_job_env = {
+    IS_LOCAL      = "false"
+    AWS_REGION    = data.aws_region.this.region
+    AWS_S3_BUCKET = try(one(aws_s3_bucket.lake.*.bucket), "")
+    POSTGRES_HOST = tostring(local.env_vars.POSTGRES_HOST)
+    POSTGRES_PORT = tostring(local.env_vars.POSTGRES_PORT)
+    POSTGRES_NAME = tostring(local.env_vars.POSTGRES_NAME)
+    POSTGRES_USER = tostring(local.env_vars.POSTGRES_USER)
+    POSTGRES_PASS = tostring(local.env_vars.POSTGRES_PASS)
   }
+  # Values are read from JOB_ENV_* shell variables so secrets never appear in the command text.
+  helm_env_flags = join(" ", [for k in keys(local.data_job_env) : "--set-string \"pythonJob.env.${k}=$JOB_ENV_${k}\""])
   data_names_java = {
     for name in local.data_dirs_java : name => {
       name = name

@@ -11,6 +11,24 @@ data:
     {{ .Values.pythonJob.scriptContent | nindent 4 }}
   requirements.txt: |
     {{ .Values.pythonJob.requirementsContent | nindent 4 }}
+  {{- range $name, $content := .Values.pythonJob.modules }}
+  {{ $name }}.py: |
+    {{ $content | nindent 4 }}
+  {{- end }}
+---
+{{- end }}
+{{- if .Values.pythonJob.env }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "name" . }}-{{ .Values.pythonJob.name }}-env
+  labels:
+    {{- include "labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  {{- range $key, $value := .Values.pythonJob.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
 ---
 {{- end }}
 apiVersion: batch/v1
@@ -36,7 +54,12 @@ spec:
                 echo "Installing pipeline dependencies from requirements.txt..."
                 pip install --no-cache-dir -r /app/requirements.txt
               fi
-              python /app/job.py
+              python /app/job.py {{ .Values.pythonJob.args }}
+          {{- if .Values.pythonJob.env }}
+          envFrom:
+            - secretRef:
+                name: {{ include "name" . }}-{{ .Values.pythonJob.name }}-env
+          {{- end }}
           {{- if .Values.pythonJob.scriptContent }}
           volumeMounts:
             - name: script
@@ -54,6 +77,10 @@ spec:
         - name: script
           configMap:
             name: {{ include "name" . }}-{{ .Values.pythonJob.name }}-source
+      {{- end }}
+      {{- if .Values.pythonJob.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       {{- end }}
       restartPolicy: {{ .Values.pythonJob.restartPolicy }}
   backoffLimit: {{ .Values.pythonJob.backoffLimit }}

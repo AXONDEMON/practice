@@ -6,20 +6,25 @@ resource "aws_db_subnet_group" "this" {
 }
 
 resource "aws_rds_cluster" "this" {
-  count                           = data.aws_caller_identity.this.id != "000000000000" && var.aws_postgres_enabled ? 1 : 0
-  cluster_identifier              = format("%s-rds-%s", var.aws_project, local.app_id)
-  engine                          = "aurora-postgresql"
-  engine_mode                     = "provisioned"
-  engine_version                  = "17.7"
-  master_username                 = "superadmin"
-  master_password                 = random_pet.this.id
-  database_name                   = replace(var.aws_project, "-", "")
-  backup_retention_period         = 7
-  preferred_backup_window         = "07:00-09:00"
-  skip_final_snapshot             = true
-  storage_encrypted               = true
-  db_subnet_group_name            = element(aws_db_subnet_group.this.*.name, count.index)
-  vpc_security_group_ids          = data.aws_security_groups.this.ids
+  count                   = data.aws_caller_identity.this.id != "000000000000" && var.aws_postgres_enabled ? 1 : 0
+  cluster_identifier      = format("%s-rds-%s", var.aws_project, local.app_id)
+  engine                  = "aurora-postgresql"
+  engine_mode             = "provisioned"
+  engine_version          = "17.7"
+  master_username         = "superadmin"
+  master_password         = random_pet.this.id
+  database_name           = replace(var.aws_project, "-", "")
+  backup_retention_period = 7
+  preferred_backup_window = "07:00-09:00"
+  skip_final_snapshot     = true
+  storage_encrypted       = true
+  db_subnet_group_name    = element(aws_db_subnet_group.this.*.name, count.index)
+  # With EKS enabled, Aurora also joins the EKS cluster security group, whose
+  # self-referencing rule lets EKS nodes (data jobs) reach the database.
+  vpc_security_group_ids = concat(
+    data.aws_security_groups.this.ids,
+    [for c in aws_eks_cluster.this : c.vpc_config[0].cluster_security_group_id]
+  )
   enabled_cloudwatch_logs_exports = ["postgresql"]
 
   serverlessv2_scaling_configuration {

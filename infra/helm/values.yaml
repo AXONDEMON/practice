@@ -3,6 +3,15 @@ pythonJob:
   name: "python-job"
   scriptContent: ""
   requirementsContent: ""
+  # Extra Python modules imported by job.py, keyed by module name (mounted as <name>.py).
+  modules: {}
+  # Extra command-line arguments for job.py, e.g. "--seed-source".
+  args: ""
+  # Environment variables for the job, stored in a Kubernetes Secret.
+  env: {}
+  # Run on the node's network so the pod can reach the node's instance metadata
+  # (credentials) when the node's IMDS hop limit is 1.
+  hostNetwork: false
   backoffLimit: 4
   ttlSecondsAfterFinished: 100
   restartPolicy: Never

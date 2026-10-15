@@ -47,3 +47,26 @@ resource "aws_s3_bucket_website_configuration" "this" {
     key = "index.html"
   }
 }
+
+# Data lake for the data engineering ETL job (Bronze/Silver/Gold, landing zone).
+# Private: holds employee data, so it is not the CloudFront website bucket.
+resource "aws_s3_bucket" "lake" {
+  count         = data.aws_caller_identity.this.id != "000000000000" && var.aws_eks_enabled ? 1 : 0
+  bucket        = format("%s-lake-%s", var.aws_project, local.app_id)
+  force_destroy = true
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = local.app_tags
+}
+
+resource "aws_s3_bucket_public_access_block" "lake" {
+  count                   = length(aws_s3_bucket.lake)
+  bucket                  = aws_s3_bucket.lake[count.index].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}

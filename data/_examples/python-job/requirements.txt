@@ -1,3 +1,9 @@
 pandas==3.0.3
-pyspark==3.5.4
 numpy==2.4.6
+pyarrow==25.0.1
+psycopg[binary]==3.3.5
+boto3==1.43.100
+# The EKS image (jupyter/all-spark-notebook) ships numexpr/bottleneck built for
+# numpy 1.x; pandas loads them if present, so pin numpy 2 compatible builds.
+numexpr==2.14.1
+bottleneck==1.5.0
